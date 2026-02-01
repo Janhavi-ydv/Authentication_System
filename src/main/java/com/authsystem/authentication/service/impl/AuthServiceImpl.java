@@ -76,8 +76,6 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() ->
                         new RuntimeException("Invalid username or password")
                 );
-
-        // 🔑 Validate password
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new RuntimeException("Invalid username or password");
         }
