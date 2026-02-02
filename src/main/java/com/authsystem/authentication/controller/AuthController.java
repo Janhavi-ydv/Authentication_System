@@ -3,6 +3,7 @@ package com.authsystem.authentication.controller;
 import com.authsystem.authentication.dto.AuthResponse;
 import com.authsystem.authentication.dto.LoginRequest;
 import com.authsystem.authentication.dto.RegisterRequest;
+import com.authsystem.authentication.dto.VerifyOtpRequest;
 import com.authsystem.authentication.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,5 +32,10 @@ public class AuthController {
             @RequestBody LoginRequest request) {
 
         return ResponseEntity.ok(authService.login(request));
+    }
+    @PostMapping("/verify-otp")
+    public String verifyOtp(@RequestBody VerifyOtpRequest request) {
+        authService.verifyOtp(request.email(), request.otp());
+        return "OTP verified successfully";
     }
 }

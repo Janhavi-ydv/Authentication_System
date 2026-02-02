@@ -35,14 +35,16 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
 
-                // Authorization rules
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/register",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/auth/verify-otp"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+
+
 
                 // JWT filter
                 .addFilterBefore(
