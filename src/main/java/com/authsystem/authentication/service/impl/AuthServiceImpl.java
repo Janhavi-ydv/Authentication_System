@@ -12,8 +12,12 @@ import com.authsystem.authentication.repository.VerificationOtpRepository;
 import com.authsystem.authentication.security.JwtService;
 import com.authsystem.authentication.service.AuthService;
 import jakarta.transaction.Transactional;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -28,19 +32,22 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final VerificationOtpRepository verificationOtpRepository;
+    private final AuthenticationManager authenticationManager;
 
     public AuthServiceImpl(
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            VerificationOtpRepository verificationOtpRepository
+            VerificationOtpRepository verificationOtpRepository,
+            AuthenticationManager authenticationManager
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.verificationOtpRepository = verificationOtpRepository;
+        this.authenticationManager = authenticationManager;
     }
 
     // ================= REGISTER =================
@@ -62,12 +69,11 @@ public class AuthServiceImpl implements AuthService {
         user.setUsername(request.username());
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setEnabled(false); // 🔒 enabled only after OTP verification
+        user.setEnabled(false); // 🔒 BLOCK LOGIN UNTIL OTP VERIFIED
         user.setRoles(Set.of(roleUser));
 
         userRepository.save(user);
 
-        // 🔐 Generate OTP
         String otp = String.valueOf(100000 + new Random().nextInt(900000));
 
         VerificationOtp verificationOtp = new VerificationOtp();
@@ -78,7 +84,6 @@ public class AuthServiceImpl implements AuthService {
 
         verificationOtpRepository.save(verificationOtp);
 
-        // TEMP: console output (later replace with email)
         System.out.println("OTP for " + request.email() + " = " + otp);
     }
 
@@ -101,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setEnabled(true);
+        user.setEnabled(true);              // ✅ NOW LOGIN IS ALLOWED
         verificationOtp.setVerified(true);
 
         userRepository.save(user);
@@ -112,19 +117,17 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request) {
 
-        User user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+        Authentication authentication =
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(
+                                request.username(),
+                                request.password()
+                        )
+                );
 
-        if (!user.isEnabled()) {
-            throw new RuntimeException("Account not verified. Please verify OTP.");
-        }
+        // If enabled = false → Spring throws DisabledException BEFORE this line
 
-
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
-        }
-
-        String token = jwtService.generateToken(user.getUsername());
+        String token = jwtService.generateToken(authentication.getName());
         return new AuthResponse(token);
     }
 }

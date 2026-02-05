@@ -15,6 +15,12 @@ public class CustomUserDetails implements UserDetails {
     public CustomUserDetails(User user) {
         this.user = user;
     }
+    @Override
+    public boolean isEnabled() {
+        return user.isEnabled();   // ✅ CORRECT
+    }
+
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -37,5 +43,4 @@ public class CustomUserDetails implements UserDetails {
     @Override public boolean isAccountNonExpired() { return true; }
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return true; }
 }
