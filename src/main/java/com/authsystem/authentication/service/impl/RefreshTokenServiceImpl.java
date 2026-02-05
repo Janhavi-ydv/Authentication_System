@@ -7,6 +7,7 @@ import com.authsystem.authentication.repository.UserRepository;
 import com.authsystem.authentication.service.RefreshTokenService;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -36,20 +37,24 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
 
-
     @Override
     public RefreshToken validateRefreshToken(String token) {
 
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
+        RefreshToken refreshToken = refreshTokenRepository
+                .findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
         if (refreshToken.isRevoked()) {
-            throw new RuntimeException("Refresh token revoked");
+            throw new RuntimeException("Refresh token already used");
         }
 
         if (refreshToken.getExpiryTime().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Refresh token expired");
         }
+
+        // 🔐 ROTATION: revoke immediately
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
 
         return refreshToken;
     }

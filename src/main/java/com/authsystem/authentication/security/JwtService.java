@@ -14,7 +14,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
     private static final long ACCESS_TOKEN_EXPIRY_MS =
-            1000 * 60 * 1; // 10 seconds
+            1000 * 60 * 1; // 1 min seconds
 
     private static final String SECRET_KEY =
             "bXlzZWNyZXQta2V5LW11c3QtYmUtMjU2LWJpdHMtbG9uZw=="; // base64
