@@ -1,6 +1,5 @@
 package com.authsystem.authentication.dto;
 
-public record AuthResponse(
-        String accessToken,
+public record RefreshTokenRequest(
         String refreshToken
 ) {}

@@ -13,6 +13,8 @@ import java.util.Date;
 import java.util.function.Function;
 @Service
 public class JwtService {
+    private static final long ACCESS_TOKEN_EXPIRY_MS =
+            1000 * 60 * 1; // 10 seconds
 
     private static final String SECRET_KEY =
             "bXlzZWNyZXQta2V5LW11c3QtYmUtMjU2LWJpdHMtbG9uZw=="; // base64
@@ -21,14 +23,26 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+//    public String generateToken(String username) {
+//        return Jwts.builder()
+//                .setSubject(username)
+//                .setIssuedAt(new Date(System.currentTimeMillis()))
+//                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+//                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+//                .compact();
+//    }
+
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+                .setExpiration(
+                        new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRY_MS)
+                )
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);

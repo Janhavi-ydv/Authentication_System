@@ -1,9 +1,6 @@
 package com.authsystem.authentication.controller;
 
-import com.authsystem.authentication.dto.AuthResponse;
-import com.authsystem.authentication.dto.LoginRequest;
-import com.authsystem.authentication.dto.RegisterRequest;
-import com.authsystem.authentication.dto.VerifyOtpRequest;
+import com.authsystem.authentication.dto.*;
 import com.authsystem.authentication.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +22,14 @@ public class AuthController {
         authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body("User registered successfully");
+    }
+    @PostMapping("/refresh-token")
+    public ResponseEntity<RefreshTokenResponse> refreshToken(
+            @RequestBody RefreshTokenRequest request
+    ) {
+        return ResponseEntity.ok(
+                authService.refreshAccessToken(request.refreshToken())
+        );
     }
 
     @PostMapping("/login")

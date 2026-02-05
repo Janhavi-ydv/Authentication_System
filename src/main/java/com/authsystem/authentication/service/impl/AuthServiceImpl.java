@@ -3,20 +3,25 @@ package com.authsystem.authentication.service.impl;
 import com.authsystem.authentication.dto.AuthResponse;
 import com.authsystem.authentication.dto.LoginRequest;
 import com.authsystem.authentication.dto.RegisterRequest;
+import com.authsystem.authentication.entity.RefreshToken;
 import com.authsystem.authentication.entity.Role;
 import com.authsystem.authentication.entity.User;
 import com.authsystem.authentication.entity.VerificationOtp;
+import com.authsystem.authentication.exception.UserNotVerifiedException;
 import com.authsystem.authentication.repository.RoleRepository;
 import com.authsystem.authentication.repository.UserRepository;
 import com.authsystem.authentication.repository.VerificationOtpRepository;
 import com.authsystem.authentication.security.JwtService;
 import com.authsystem.authentication.service.AuthService;
+import com.authsystem.authentication.service.RefreshTokenService;
 import jakarta.transaction.Transactional;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.authsystem.authentication.dto.RefreshTokenResponse;
+
 
 
 import java.time.LocalDateTime;
@@ -33,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final VerificationOtpRepository verificationOtpRepository;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -40,7 +46,8 @@ public class AuthServiceImpl implements AuthService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             VerificationOtpRepository verificationOtpRepository,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            RefreshTokenService refreshTokenService
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -48,6 +55,7 @@ public class AuthServiceImpl implements AuthService {
         this.jwtService = jwtService;
         this.verificationOtpRepository = verificationOtpRepository;
         this.authenticationManager = authenticationManager;
+        this.refreshTokenService = refreshTokenService;
     }
 
     // ================= REGISTER =================
@@ -113,21 +121,47 @@ public class AuthServiceImpl implements AuthService {
         verificationOtpRepository.save(verificationOtp);
     }
 
+    @Override
+    public RefreshTokenResponse refreshAccessToken(String refreshToken) {
+
+        RefreshToken validToken =
+                refreshTokenService.validateRefreshToken(refreshToken);
+
+        User user = validToken.getUser();
+
+        String newAccessToken =
+                jwtService.generateToken(user.getUsername());
+
+        return new RefreshTokenResponse(newAccessToken);
+    }
+
+
     // ================= LOGIN =================
     @Override
     public AuthResponse login(LoginRequest request) {
 
-        Authentication authentication =
-                authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(
-                                request.username(),
-                                request.password()
-                        )
-                );
+        User user = userRepository.findByUsername(request.username())
+                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
-        // If enabled = false → Spring throws DisabledException BEFORE this line
+        if (!user.isEnabled()) {
+            throw new UserNotVerifiedException("Account not verified");
+        }
 
-        String token = jwtService.generateToken(authentication.getName());
-        return new AuthResponse(token);
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new RuntimeException("Invalid credentials");
+        }
+
+        String accessToken =
+                jwtService.generateToken(user.getUsername());
+
+        RefreshToken refreshToken =
+                refreshTokenService.createRefreshToken(user);
+
+        return new AuthResponse(
+                accessToken,
+                refreshToken.getToken()
+        );
     }
+
+
 }
